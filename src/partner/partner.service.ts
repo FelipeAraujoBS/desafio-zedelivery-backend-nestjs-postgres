@@ -54,4 +54,67 @@ export class PartnerService {
 
     return result[0];
   }
+
+  async getPartnerById(id: string) {
+    const result = await this.prismaService.$queryRaw<
+      Array<{
+        id: string;
+        trading_name: string;
+        owner_name: string;
+        document: string;
+        coverage_area: string;
+        address: string;
+        created_at: Date;
+      }>
+    >`
+    SELECT
+      id,
+      trading_name,
+      owner_name,
+      document,
+      ST_AsGeoJSON(coverage_area) as coverage_area,
+      ST_AsGeoJSON(address) as address,
+      created_at
+    FROM partners
+    WHERE id = ${id}
+  `;
+    return result[0];
+  }
+
+  async searchNearestPartner(searchPartnerDto) {
+    const result = await this.prismaService.$queryRaw<
+      Array<{
+        id: string;
+        trading_name: string;
+        owner_name: string;
+        document: string;
+        coverage_area: string;
+        address: string;
+        distance: number;
+        created_at: Date;
+      }>
+    >`
+    SELECT
+      id,
+      trading_name,
+      owner_name,
+      document,
+      ST_AsGeoJSON(coverage_area) as coverage_area,
+      ST_AsGeoJSON(address) as address,
+      ST_Distance(
+        address::geography,
+        ST_SetSRID(ST_MakePoint(${searchPartnerDto.long}, ${searchPartnerDto.lat}), 4326)::geography
+      ) as distance,
+      created_at
+    FROM partners
+    WHERE ST_Contains(
+      coverage_area,
+      ST_SetSRID(ST_MakePoint(${searchPartnerDto.long}, ${searchPartnerDto.lat}), 4326)
+    )
+    ORDER BY distance
+    LIMIT 1
+  `;
+
+    return result[0] || null;
+  }
 }
