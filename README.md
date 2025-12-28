@@ -1,96 +1,284 @@
-# Backend Challenge
+# Partner Geolocation API
 
-> _Este arquivo também está disponível em português [aqui](backend_pt.md)._
+API REST para gerenciamento de parceiros com funcionalidades de busca geoespacial, permitindo encontrar o parceiro mais próximo baseado em coordenadas geográficas.
 
-In Zé we thrive to find our best partner to deliver beverages to our customers, providing the best and fastest service.
-To achieve this our compute fleet deals with [GIS](https://en.wikipedia.org/wiki/Geographic_information_system) objects all the time.
+## 🚀 Tecnologias Utilizadas
 
-When programming we try to follow a myriad of coding best practices and patterns (those you can read on books like Clean Code, Clean Architecture, The Pragmatic Programmer, Domain-Driven Design, Microservice Patterns, etc...).
-Since writing **good code is a must** on our daily basis we expect people that want to join our team to think alike. This code challenge is something we designed to find this awesome programmer.
+- **[NestJS](https://nestjs.com/)** - Framework Node.js progressivo para construção de aplicações server-side eficientes e escaláveis
+- **[PostgreSQL](https://www.postgresql.org/)** - Banco de dados relacional robusto e confiável
+- **[PostGIS](https://postgis.net/)** - Extensão espacial para PostgreSQL, permitindo consultas geográficas
+- **[Prisma](https://www.prisma.io/)** - ORM moderno para Node.js e TypeScript
+- **[Docker](https://www.docker.com/)** - Plataforma para desenvolvimento, envio e execução de aplicações em containers
 
-## 1. What we want you to do
+## 📋 Pré-requisitos
 
-We expect you to develop a service that provides an API using _REST_ or _GraphQL_ that implements the three following features and respects the following technical requirements:
+Antes de começar, certifique-se de ter instalado:
 
-### 1.1. Create a partner:
+- [Node.js](https://nodejs.org/) (versão 18 ou superior)
+- [Docker](https://www.docker.com/get-started) e Docker Compose
+- [Git](https://git-scm.com/)
 
-Save in a database a partner defined by **all** the fields represented by the JSON and rules below:
+## 🔧 Instalação e Configuração
+
+### 1. Clone o repositório
+
+```bash
+git clone <seu-repositorio>
+cd <nome-do-projeto>
+```
+
+### 2. Instale as dependências
+
+```bash
+npm install
+```
+
+### 3. Configure as variáveis de ambiente
+
+Crie um arquivo `.env` na raiz do projeto:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/partners_db?schema=public"
+```
+
+### 4. Inicie o banco de dados com Docker
+
+```bash
+docker-compose up -d
+```
+
+Isso irá iniciar um container PostgreSQL com a extensão PostGIS habilitada.
+
+### 5. Execute as migrations do Prisma
+
+```bash
+npx prisma migrate dev
+```
+
+### 6. Inicie a aplicação
+
+```bash
+npm run start:dev
+```
+
+A API estará disponível em `http://localhost:3000`
+
+## 🗄️ Estrutura do Banco de Dados
+
+A tabela `partners` possui a seguinte estrutura:
+
+- `id` (UUID) - Identificador único
+- `trading_name` (TEXT) - Nome fantasia
+- `owner_name` (TEXT) - Nome do proprietário
+- `document` (TEXT) - CNPJ/CPF
+- `coverage_area` (GEOMETRY) - Área de cobertura (MultiPolygon)
+- `address` (GEOMETRY) - Endereço (Point)
+- `created_at` (TIMESTAMP) - Data de criação
+
+## 📡 Endpoints da API
+
+### 1. Criar Parceiro
+
+**POST** `/partner`
 
 ```json
 {
-  "id": 1,
-  "tradingName": "Adega da Cerveja - Pinheiros",
-  "ownerName": "Zé da Silva",
-  "document": "1432132123891/0001",
+  "tradingName": "Adega Emporio",
+  "ownerName": "Ze da Silva",
+  "document": "23.254.882/0001-17",
   "coverageArea": {
     "type": "MultiPolygon",
     "coordinates": [
       [
         [
-          [30, 20],
-          [45, 40],
-          [10, 40],
-          [30, 20]
-        ]
-      ],
-      [
-        [
-          [15, 5],
-          [40, 10],
-          [10, 20],
-          [5, 10],
-          [15, 5]
+          [-46.80874, -23.58613],
+          [-46.83603, -23.62247],
+          [-46.85234, -23.65691],
+          [-46.80874, -23.58613]
         ]
       ]
     ]
   },
   "address": {
     "type": "Point",
-    "coordinates": [-46.57421, -21.785741]
+    "coordinates": [-46.788303, -23.644058]
   }
 }
 ```
 
-1. The `address` field follows the `GeoJSON Point` format (https://en.wikipedia.org/wiki/GeoJSON);
-2. The `coverageArea` field follows the `GeoJSON MultiPolygon` format (https://en.wikipedia.org/wiki/GeoJSON);
-3. The `document` must be a unique field;
-4. The `id` must be a unique field, but not necessarily an integer;
+### 2. Listar Todos os Parceiros
 
-You can use this [json](files/pdvs.json) file composed of hundreds of partner information to test your application — we do **not** expect these partners to be pre loaded in the database.
-Below, you can have a look at how these partners might be represented in a map:
-![Partners in map](./imgs/pdvs.png)
+**GET** `/partner`
 
-### 1.2. Load partner by id:
+### 3. Buscar Parceiro por ID
 
-Return a specific partner by its `id` with all the fields presented above.
+**GET** `/partner/:id`
 
-### 1.3. Search partner:
+Exemplo: `GET /partner/38ad11c2-7464-427b-b14e-9093bba5a348`
 
-Given a specific location (coordinates `long` and `lat`), search the **nearest** partner **which the coverage area includes** the location.
+### 4. Buscar Parceiro Mais Próximo
 
-### 1.4. Technical Requirements:
+**GET** `/partner/search?long={longitude}&lat={latitude}`
 
-- The programming language and the database engine are entirely up to you;
-- Your project must be **cross-platform**;
-- Provide a documentation (README.md) file explaining how to execute your service **locally** and how to deploy it (_focus on simplicity, and don't forget that we should test your service on our own, without further assistance_).
+Exemplo: `GET /partner/search?long=-46.788303&lat=-23.644058`
 
-## Evaluation Method
+**Resposta:**
 
-We will evaluate your code challenge based on some [system quality attributes](https://en.wikipedia.org/wiki/List_of_system_quality_attributes).
-Some we consider a must-have, like **correctness**, and will be evaluated on a binary (works/follows or not) approach.
-The others, since they are not objective, will not be able to fail your challenge alone.
-These are all the quality attributes that we expect you address:
+```json
+{
+  "id": "38ad11c2-7464-427b-b14e-9093bba5a348",
+  "trading_name": "Adega Emporio",
+  "owner_name": "Ze da Silva",
+  "document": "23.254.882/0001-17",
+  "coverage_area": "{\"type\":\"MultiPolygon\",\"coordinates\":[...]}",
+  "address": "{\"type\":\"Point\",\"coordinates\":[-46.788303,-23.644058]}",
+  "distance": 0,
+  "created_at": "2025-12-28T02:09:54.800Z"
+}
+```
 
-- **Correctness:** Your code must follow **all** the requirements presented on item [1.](#1-what-we-want-you-to-do);
-- **Performance:** The more partners you can handle and the fastest you can query the best;
-- **Testability:** How well tested your code is and how easy it is to add new tests to your code;
-- **Maintainability:** How easy to add extra features to your code;
-- **Separation of concerns:** (https://en.wikipedia.org/wiki/Separation_of_concerns)
+## 🔍 Funcionalidades Geoespaciais
 
-## How to deliver it
+A API utiliza as seguintes funções do PostGIS:
 
-- Push your code to a **Github private repository** and add @ze-engineering-code-challenge as a collaborator for it.
-  This Github account (@ze-engineering-code-challenge) is solely used by Zé's engineers to download your code and review it.
-- **Once you have finished the challenge, please follow these [instructions](https://github.com/ZXVentures/ze-code-challenges#how-to-deliver) to submit it to our team.**
+- **ST_Contains** - Verifica se um ponto está dentro da área de cobertura
+- **ST_Distance** - Calcula a distância em metros entre dois pontos geográficos
+- **ST_GeomFromGeoJSON** - Converte GeoJSON em geometria PostGIS
+- **ST_AsGeoJSON** - Converte geometria PostGIS em GeoJSON
+- **ST_SetSRID** - Define o sistema de referência espacial (SRID 4326 = WGS84)
 
-Good luck!
+## 🐳 Docker Compose
+
+O arquivo `docker-compose.yml` configura:
+
+```yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: partners_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: partners_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+```
+
+## 📝 Scripts Disponíveis
+
+```bash
+# Desenvolvimento
+npm run start:dev
+
+# Build
+npm run build
+
+# Produção
+npm run start:prod
+
+# Testes
+npm run test
+
+# Prisma Studio (interface visual do banco)
+npx prisma studio
+```
+
+## 🧪 Testando a API
+
+Você pode usar ferramentas como:
+
+- [Postman](https://www.postman.com/)
+- [Insomnia](https://insomnia.rest/)
+- [Thunder Client](https://www.thunderclient.com/) (extensão VS Code)
+- cURL
+
+Exemplo com cURL:
+
+```bash
+# Criar parceiro
+curl -X POST http://localhost:3000/partner \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tradingName": "Adega Teste",
+    "ownerName": "João Silva",
+    "document": "12.345.678/0001-90",
+    "coverageArea": {
+      "type": "MultiPolygon",
+      "coordinates": [[[[−46.80874,−23.58613],[−46.83603,−23.62247],[−46.80874,−23.58613]]]]
+    },
+    "address": {
+      "type": "Point",
+      "coordinates": [−46.788303,−23.644058]
+    }
+  }'
+
+# Buscar parceiro mais próximo
+curl http://localhost:3000/partner/search?long=-46.788303&lat=-23.644058
+```
+
+## 🛠️ Troubleshooting
+
+### Erro de conexão com o banco de dados
+
+Verifique se o container Docker está rodando:
+
+```bash
+docker ps
+```
+
+Se não estiver, inicie novamente:
+
+```bash
+docker-compose up -d
+```
+
+### Erro "PostGIS extension not found"
+
+Entre no container e habilite a extensão:
+
+```bash
+docker exec -it partners_db psql -U postgres -d partners_db
+CREATE EXTENSION IF NOT EXISTS postgis;
+\q
+```
+
+### Porta 5432 já em uso
+
+Se você já tem PostgreSQL rodando localmente, altere a porta no `docker-compose.yml`:
+
+```yaml
+ports:
+  - '5433:5432' # Muda para 5433
+```
+
+E atualize o `DATABASE_URL` no `.env`:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5433/partners_db?schema=public"
+```
+
+## 📚 Recursos Adicionais
+
+- [Documentação NestJS](https://docs.nestjs.com/)
+- [Documentação Prisma](https://www.prisma.io/docs/)
+- [Documentação PostGIS](https://postgis.net/documentation/)
+- [Especificação GeoJSON](https://geojson.org/)
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT.
+
+## 👥 Contribuindo
+
+Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull requests.
+
+---
+
+Desenvolvido com ❤️ usando NestJS e PostGIS
